@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id                  String    @id @default(uuid())
+  nome                String    @db.VarChar(100)
+  email               String    @db.VarChar(256)
+  senha               String    @db.VarChar(200)
+  cargo               String    @db.VarChar(20)
+  acessos             Json?
+  percentual_comissao Int?
+  versao              Int?
+  criadoEm            DateTime  @default(now())
+  atualizadoEm        DateTime  @default(now())
+  deletadoEm          DateTime?
+
+  produto    Produto[]   @relation("usuario")
+  orcamentos Orcamento[]
+
+  @@map("usuarios")
+}
+
+model Produto {
+  id                String    @id @default(uuid())
+  marca             String    @db.VarChar(255)
+  modelo            String    @db.VarChar(255)
+  valor_completo     Decimal   @db.Decimal(20, 2)
+  valor_medio        Decimal   @db.Decimal(20, 2)
+  valor_reduzido     Decimal   @db.Decimal(20, 2)
+  valor_exclusivo    Decimal   @db.Decimal(20, 2)
+  foto              Json?
+  descricao_tecnica String    @db.Text()
+  id_usu_fk         String    @db.VarChar(36)
+  versao            Int?
+  criadoEm          DateTime  @default(now())
+  atualizadoEm      DateTime  @default(now())
+  deletadoEm        DateTime?
+
+  usuario           Usuario            @relation("usuario", fields: [id_usu_fk], references: [id])
+  produtosOrcamento ProdutoOrcamento[]
+
+  @@map("produtos")
+}
+
+model Cliente {
+  id           String      @id @default(uuid())
+  nome         String      @db.VarChar(100)
+  documento    String      @db.VarChar(14)
+  telefone     String      @db.VarChar(11)
+  nascimento   String?     @db.VarChar(10)
+  versao       Int?
+  criadoEm     DateTime    @default(now()) @db.Timestamp(0)
+  atualizadoEm DateTime    @default(now()) @updatedAt @db.Timestamp(0)
+  deletadoEm   DateTime?
+  id_end_fk    String      @db.VarChar(36)
+  endereco     Endereco    @relation("endereco", fields: [id_end_fk], references: [id])
+  orcamentos   Orcamento[]
+
+  @@index([id_end_fk], map: "cliente_id_end_fk_fkey")
+  @@map("clientes")
+}
+
+model Estado {
+  id           String    @id @default(uuid())
+  nome         String    @db.VarChar(100)
+  uf           String    @db.VarChar(2)
+  versao       Int?
+  criadoEm     DateTime  @default(now()) @db.Timestamp(0)
+  atualizadoEm DateTime  @default(now()) @db.Timestamp(0)
+  deletadoEm   DateTime?
+  cidades      Cidade[]  @relation("estado")
+
+  @@map("estados")
+}
+
+model Cidade {
+  id           String     @id @default(uuid())
+  nome         String     @db.VarChar(100)
+  id_est_fk    String     @db.VarChar(36)
+  versao       Int?
+  criadoEm     DateTime   @default(now()) @db.Timestamp(0)
+  atualizadoEm DateTime   @default(now()) @db.Timestamp(0)
+  deletadoEm   DateTime?
+  enderecos    Endereco[] @relation("cidade")
+  estado       Estado     @relation("estado", fields: [id_est_fk], references: [id])
+
+  @@index([id_est_fk], map: "cidades_id_est_fk_fkey")
+  @@map("cidades")
+}
+
+model Endereco {
+  id           String    @id @default(uuid())
+  rua          String    @db.VarChar(255)
+  bairro       String    @db.VarChar(100)
+  cep          String    @db.VarChar(10)
+  numero       String    @db.VarChar(10)
+  complemento  String?   @db.VarChar(255)
+  id_cid_fk    String    @db.VarChar(36)
+  versao       Int?
+  criadoEm     DateTime  @default(now()) @db.Timestamp(0)
+  atualizadoEm DateTime  @default(now()) @db.Timestamp(0)
+  deletadoEm   DateTime?
+  cidade       Cidade    @relation("cidade", fields: [id_cid_fk], references: [id])
+  clientes     Cliente[] @relation("endereco")
+
+  @@index([id_cid_fk], map: "enderecos_id_cid_fk_fkey")
+  @@map("enderecos")
+}
+
+model Orcamento {
+  id                        String             @id @default(uuid())
+  percentual_comissao       Decimal?           @db.Decimal(5, 2)
+  valor_final               Decimal            @db.Decimal(20, 2)
+  forma_pagamento           String?            @db.VarChar(100)
+  prazo                     String             @db.VarChar(100)
+  observacao                String?            @db.VarChar(100)
+  parcelas                  Int?
+  codigo_finame             String?            @db.VarChar(30)
+  id_cli_fk                 String             @db.VarChar(36)
+  id_usu_fk                 String             @db.VarChar(36)
+  versao                    Int?
+  criadoEm                  DateTime           @default(now())
+  atualizadoEm              DateTime           @default(now())
+  deletadoEm                DateTime?
+  cliente                   Cliente            @relation(fields: [id_cli_fk], references: [id])
+  usuario                   Usuario            @relation(fields: [id_usu_fk], references: [id])
+  produtosOrcamento         ProdutoOrcamento[]
+
+  @@index([id_cli_fk])
+  @@map("orcamentos")
+}
+
+model ProdutoOrcamento {
+  id                   String    @id @default(uuid())
+  valor_unitario       Decimal   @db.Decimal(20, 2)
+  valor_final_unitario Decimal   @db.Decimal(20, 2)
+  quantidade           Int
+  id_orc_fk            String    @db.VarChar(36)
+  id_pro_fk            String    @db.VarChar(36)
+  versao               Int?
+  orcamento            Orcamento @relation(fields: [id_orc_fk], references: [id])
+  produto              Produto   @relation(fields: [id_pro_fk], references: [id])
+
+  @@index([id_orc_fk])
+  @@index([id_pro_fk])
+  @@map("produtos_orcamentos")
+}
+
+model Sincronizacao {
+  id               String   @id @default(uuid())
+  usuario          DateTime @db.Timestamp(0)
+  produto          DateTime @db.Timestamp(0)
+  cliente          DateTime @db.Timestamp(0)
+  endereco         DateTime @db.Timestamp(0)
+  orcamento        DateTime @db.Timestamp(0)
+  produtoOrcamento DateTime @db.Timestamp(0)
+  criadoEm         DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("sincronizacoes")
+}
